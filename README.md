@@ -1,8 +1,28 @@
-# kapbit-go
+# kapbit-go: Saga Orchestrator for Go
 
 Kapbit is a lightweight, high-performance workflow orchestrator for Go, designed 
 specifically for the Saga pattern. It provides a robust framework for building 
 long-running, fault-tolerant workflows without the overhead of heavy infrastructure.
+
+- [kapbit-go: Saga Orchestrator for Go](#kapbit-go-saga-orchestrator-for-go)
+  - [Why Kapbit?](#why-kapbit)
+  - [Key Features](#key-features)
+  - [Examples](#examples)
+  - [How It Works](#how-it-works)
+    - [Kapbit Instance](#kapbit-instance)
+    - [Workflow](#workflow)
+    - [Circuit Breakers](#circuit-breakers)
+    - [Retry Worker \& Dead Letters](#retry-worker--dead-letters)
+    - [Events and Emitter](#events-and-emitter)
+    - [Capacity \& Backpressure](#capacity--backpressure)
+      - [MaxWorkflows Limit](#maxworkflows-limit)
+      - [Ingress Gate](#ingress-gate)
+    - [Observability \& Async Results](#observability--async-results)
+    - [Repository And Fencing](#repository-and-fencing)
+    - [Codec](#codec)
+    - [Fault Isolation](#fault-isolation)
+  - [Performance \& Scalability](#performance--scalability)
+    - [Why Kapbit is Fast](#why-kapbit-is-fast)
 
 ## Why Kapbit?
 
@@ -17,8 +37,8 @@ long-running, fault-tolerant workflows without the overhead of heavy infrastruct
 
 ## Key Features
 
-- **Fencing**: Guarantees a single active writer, preventing split-brain
-  scenarios.
+- **Fencing**: Prevents split-brain scenarios by guaranteeing a single active 
+  writer. This allows you to safely run multiple instances.
 - **Horizontal Scalability**: Distributes load across partitions to scale
   throughput.
 - **Fault Tolerance**: Automatically reconnects to storage and resumes workflow
@@ -28,7 +48,6 @@ long-running, fault-tolerant workflows without the overhead of heavy infrastruct
   (user-managed) layers.
 - **Extensible Design**: Built to support various storage backends and codecs;
   currently ships with Kafka and JSON support.
-  
 
 ## Examples
 
@@ -40,7 +59,7 @@ Let's look at the Kapbit components.
 
 ### Kapbit Instance
 
-Before launching any new workflow, a Kapbit Instance must establish itself as
+Before launching any new workflow, a Kapbit instance must establish itself as
 an authorized Writer for the storage. It does so by emitting an Active Writer
 event to all available partitions. The storage layer ensures only one instance
 can hold writer status at a time, preventing conflicting writes and split-brain
@@ -123,13 +142,14 @@ The diagram below shows Step2 failing and triggering the cleanup for Step1.
 ### Circuit Breakers
 
 Kapbit supports two types of Circuit Breakers:
+
 - **System Level (Storage)**: A built-in circuit breaker for the storage layer.
 - **Workflow Level (External Services)**: User-defined circuit breakers for
-  remote services and third-party APIs. Returning a `CircuitBreakerOpenError`
+  remote services and third-party APIs. Returning a `codec.CircuitBreakerOpenError`
   from a workflow step signals to Kapbit that a downstream dependency is
   unavailable.
 
-### Retry Worker
+### Retry Worker & Dead Letters
 
 A workflow can fail (return a user-defined error) for only one reason: the 
 remote service it depends on is unavailable. In all other cases it should return
@@ -137,6 +157,7 @@ a result, even after the compensation phase.
 
 The Retry Worker runs in the background to re-attempt failed workflows,
 resuming from the last failed step. It operates in two modes:
+
 - **Fast Mode (Default)**: Handles temporary issues (like network blinks or
   timeouts) with immediate or high-frequency retries.
 - **Slow Mode**: Triggered when frequent retries make no sense, for example,
@@ -148,6 +169,7 @@ Dead Letter event for manual handling.
 ### Events and Emitter
 
 Different system components emit different events:
+
 - Kapbit Instance: Emits Active Writer, Workflow Created and Rejected events.
 - Workflow: Emits Step Outcome and Workflow Result events.
 - Retry Worker: Emits Dead Letter and Rejected events.
@@ -156,13 +178,36 @@ Where Rejected event is used to terminate the workflow if some of its event was
 rejected by the storage, or there was an encoding error.
 
 All components delegate event emission to the Emitter, which retries 
-indefinitely using exponential backoff. This ensures that events are eventually 
-processed even during temporary outages.
+indefinitely using **exponential backoff**. This ensures that events are 
+eventually processed even during temporary outages.
 
 While an alternative approach might be to give up and emit a Dead Letter after
 several failed attempts, this wouldn't work - if the storage itself is
 unavailable the Dead Letter saving would also fail. Therefore, retrying 
 indefinitely is the only safe strategy.
+
+### Capacity & Backpressure
+
+Kapbit is designed to handle load gracefully, ensuring that a slow or unavailable 
+storage layer doesn't crash the system.
+
+#### MaxWorkflows Limit
+
+The `MaxWorkflows` threshold governs the total number of concurrent workflows 
+an instance can process (including recovered workflows). Once reached, the 
+instance stops accepting new work until existing workflows complete.
+
+#### Ingress Gate
+
+When a Circuit Breaker opens, the system can no longer function properly and
+should stop accepting new workflows. This is exactly what the Ingress Gate is
+for. Both the Kapbit Instance and the Emitter close it when they encounter a
+`codes.CircuitBreakerOpenError`. 
+
+The gate becomes open again, only after successful workflow execution, processed
+by Kapbit Instance or Retry Worker. During the close period, the last one can 
+use already failed workflows to probe the system and reopen the gate as soon as 
+possible.
 
 ### Observability & Async Results
 
@@ -173,25 +218,14 @@ data.
 Following the **CQRS (Command Query Responsibility Segregation)** pattern, the 
 log storage serves as the **Single Source of Truth**. To implement features 
 like a results dashboard or status API, you should:
-- **Consume and filter** events directly from the log storage.
-- **Project** those events into one or more read-optimized databases (e.g., 
-  Key/Value stores, relational DBs, or search indexes).
+
+- Consume and filter events directly from the log storage.
+- Project those events into one or more read-optimized databases (e.g., Key/Value 
+  stores, relational DBs, or search indexes).
 
 This decoupled approach ensures that the execution engine remains lightweight 
 and highly performant, while giving you the flexibility to build multiple 
 specialized views of your data.
-
-### Ingress Gate
-
-When a Circuit Breaker opens, the system can no longer function properly and
-should stop accepting new workflows. This is exactly what the Ingress Gate is
-for. Both the Kapbit Instance and the Emitter close it when they encounter a
-`CircuitBreakerOpenError`. 
-
-The gate becomes open again, only after successful workflow execution, processed
-by Kapbit Instance or Retry Worker. During the close period, the last one can 
-use already failed workflows to probe the system and reopen the gate as soon as 
-possible.
 
 ### Repository And Fencing
 
@@ -208,3 +242,44 @@ longer modify the storage. In this case, it will immediately terminate.
 The Repository depends on a user-provided Codec, to encode the Workflow related 
 data, such as: input, outcomes, result. At the moment only the JSON format is 
 supported.
+
+### Fault Isolation
+
+When a circuit breaker opens, the Ingress Gate halts all new workflows, 
+allowing a single service failure to block the entire Kapbit instance.
+
+To mitigate this, group services into logical bundles, each served by its own 
+independent Kapbit instance.
+
+```
+kapbit1 (blocked)                kapbit2 (still works)
+   |                                  |
+   |-- service1 (fail)                |-- service4
+   |-- service2                       |-- service5
+   |-- service3                       |-- service6
+```
+
+## Performance & Scalability
+
+Kapbit's architecture is fundamentally designed for high-throughput, low-latency 
+workflow orchestration.
+
+### Why Kapbit is Fast
+
+- **Log-Based Storage (Kafka)**: Unlike orchestrators that rely on distributed 
+  databases, Kapbit operates on a distributed log. Kafka is optimized for 
+  sequential writes and high-concurrency reads, making it ideal for event 
+  sourcing.
+- **Partition-Based Scaling**: Kapbit leverages Kafka partitions for horizontal 
+  scalability. Processing capacity can be scaled by adding more Kapbit instances 
+  and increasing the partition count.
+- **Minimalistic Core**: The engine itself is lightweight and focused solely on 
+  state management.
+
+If you are coming from a traditional database-backed workflow engine, 
+**significantly higher throughput** and better scalability can be expected with 
+Kapbit's log-oriented approach. 
+
+While performance varies by environment, Kafka-based systems scale to hundreds 
+of thousands of events per second per node, while traditional databases often 
+hit a performance ceiling in the low thousands.
