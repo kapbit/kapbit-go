@@ -1,5 +1,9 @@
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/kapbit/codec-go v0.0.0-20260410023856-695a64fad935 h1:f2QsVTeKmyKAMapTCjUQ6MEf28TYBmGwoACkS3+OQp4=
+github.com/kapbit/codec-go v0.0.0-20260410023856-695a64fad935/go.mod h1:ix1DX50OEWjZfGq6QN5c4vR8SUwupCrNrRXrpsWVBFk=
+github.com/kapbit/codec-json-go v0.0.0-20260410024641-dacab6809d3b h1:A7i1uQ2enblwPNBxZQVVnSgAjyVO5JPVsjCkuc3PHP8=
+github.com/kapbit/codec-json-go v0.0.0-20260410024641-dacab6809d3b/go.mod h1:5esv2c0B45eR6veQx+AmctWbd2u9CzJf+OiL4TVGYMA=
 github.com/mus-format/common-go v0.0.0-20260324174526-3d8f1741b5a2 h1:oob6maWbVV+yevC1EawGOSyqcU2Cvj3ZWAF0FKoT+uU=
 github.com/mus-format/common-go v0.0.0-20260324174526-3d8f1741b5a2/go.mod h1:XhSTID+Ln32bHgJQjtizWsMFY219tfWa4sObJxHhATw=
 github.com/mus-format/mus-go v0.9.1 h1:zqrFpWn27TJC5cPk1D6Xo502IzgfLuKdgDcsZLp0NAE=
