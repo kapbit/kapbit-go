@@ -42,11 +42,11 @@ func FencedTestCase() TestCase {
 		Setup: Setup{
 			Tools: kapbit.Tools{
 				Factory: factory,
-				Engine: service,
+				Engine:  service,
 				Worker: mock.NewWorkerMock().RegisterStart(
 					func(ctx context.Context) {},
 				),
-				Gate: &support.IngressGate{},
+				Gate: &support.EntryGate{},
 			},
 			Options: kapbit.Options{
 				TimeProvider: timeProvider,

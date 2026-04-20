@@ -67,7 +67,7 @@ func New(ctx context.Context, defs wfl.Definitions,
 	o.Logger = slog.New(log.NewUniqueHandler(o.Logger.Handler())).
 		With("app", "kapbit", "node-id", nodeIDLogValue(o.NodeID))
 	var (
-		gate           = &support.IngressGate{}
+		gate           = &support.EntryGate{}
 		store          = evs.New(o.NodeID, codec, repository)
 		partitionCount = store.PartitionCount()
 		evntTools      = &evnt.Kit{Time: o.TimeProvider}
@@ -101,7 +101,7 @@ func New(ctx context.Context, defs wfl.Definitions,
 	// Replace the temporary emitter with a fully-featured one connected to the
 	// checkpoint manager and position tracker.
 	//
-	// This emitter will automatically close the ingress gate if storage becomes
+	// This emitter will automatically close the entry gate if storage becomes
 	// unavailable (codes.CircuitBreakerOpenError), providing holistic
 	// backpressure across Kapbit.
 	emitter, err = makeRetryEmitter(store, chptman, tracker, gate, o)
@@ -157,8 +157,11 @@ func NewWithTools(ctx context.Context, cancelCause context.CancelCauseFunc,
 //
 // Lifecycle Errors:
 //   - ErrClosed: If Kapbit is currently shutting down or closed.
-//   - ErrIngressGateClosed: If Kapbit is in backpressure mode (circuit
-//     breaker is open for storage or a required external engine).
+//   - Err:T
+//
+// GateClosed: If Kapbit is in backpressure mode (circuit
+//
+//	breaker is open for storage or a required external engine).
 //
 // Creation Errors:
 //   - wfl.WorkflowTypeNotRegisteredError: If the requested type is unknown.
@@ -194,7 +197,7 @@ func (k *Kapbit) ExecWorkflow(id wfl.ID, tp wfl.Type, input any) (
 	l := k.logger.With("wid", id, "wtype", tp)
 	if k.tools.Gate.Closed() {
 		k.reportWorkflowSkippedGateClosed(l)
-		err = NewKapbitError(ErrIngressGateClosed)
+		err = NewKapbitError(ErrEntryGateClosed)
 		return
 	}
 
@@ -225,7 +228,7 @@ func (k *Kapbit) ExecWorkflow(id wfl.ID, tp wfl.Type, input any) (
 	// succeeds. This ensures that both the storage (via emitter) and any
 	// external engines (called by the workflow) are healthy.
 	if k.tools.Gate.Open() {
-		k.reportIngressGateOpened(l)
+		k.reportEntryGateOpened(l)
 	}
 	execTime := k.options.TimeProvider.Now() - start
 	k.reportWorkflowFinished(l, execTime)
@@ -243,7 +246,7 @@ func (k *Kapbit) WorkflowCount() int {
 }
 
 // Shutdown gracefully shuts down the Kapbit instance.
-// It seals the ingress gate, waits for all active workflows to complete or
+// It seals the entry gate, waits for all active workflows to complete or
 // for the context to timeout, and then closes the instance.
 func (k *Kapbit) Shutdown(ctx context.Context) error {
 	k.tools.Gate.Seal()
@@ -276,7 +279,7 @@ func (k *Kapbit) handleError(stage string, err error, l *slog.Logger) error {
 	var cberr *codes.CircuitBreakerOpenError
 	if errors.As(err, &cberr) {
 		if k.tools.Gate.Close() {
-			k.reportIngressGateClosed(l, cberr.Service())
+			k.reportEntryGateClosed(l, cberr.Service())
 		}
 	} else {
 		k.reportWorkflowStageFailed(l, stage, err)
@@ -289,7 +292,7 @@ func (k *Kapbit) reportStarted() {
 }
 
 func (k *Kapbit) reportWorkflowSkippedGateClosed(l *slog.Logger) {
-	l.Debug("workflow skipped: ingress gate closed")
+	l.Debug("workflow skipped: entry gate closed")
 }
 
 func (k *Kapbit) reportWorkflowStarting(l *slog.Logger) {
@@ -304,20 +307,20 @@ func (k *Kapbit) reportWorkflowFinished(l *slog.Logger, execTime int64) {
 	l.Debug("workflow execution finished", "exec_time", execTime)
 }
 
-func (k *Kapbit) reportIngressGateClosed(l *slog.Logger, engine string) {
-	reportIngressGateClosed(l, engine)
+func (k *Kapbit) reportEntryGateClosed(l *slog.Logger, engine string) {
+	reportEntryGateClosed(l, engine)
 }
 
-func reportIngressGateClosed(l *slog.Logger, engine string) {
-	l.Debug("ingress gate closed", "trigger", "circuit_breaker", "engine", engine)
+func reportEntryGateClosed(l *slog.Logger, engine string) {
+	l.Debug("entry gate closed", "trigger", "circuit_breaker", "engine", engine)
 }
 
-func (k *Kapbit) reportIngressGateOpened(l *slog.Logger) {
-	reportIngressGateOpened(l)
+func (k *Kapbit) reportEntryGateOpened(l *slog.Logger) {
+	reportEntryGateOpened(l)
 }
 
-func reportIngressGateOpened(l *slog.Logger) {
-	l.Info("ingress gate opened, resuming normal execution")
+func reportEntryGateOpened(l *slog.Logger) {
+	l.Info("entry gate opened, resuming normal execution")
 }
 
 func (k *Kapbit) reportWorkflowStageFailed(l *slog.Logger, stage string, err error) {
@@ -387,7 +390,7 @@ func restoreRuntime(ctx context.Context, factory wfl.Factory,
 }
 
 func makeTempRetryEmitter(store evs.EventStore, partitionCount int,
-	gate *support.IngressGate,
+	gate *support.EntryGate,
 	o Options,
 ) (emitter evnt.Emitter, err error) {
 	// Create temporary checkpoint manager and position tracker for initial
@@ -405,7 +408,7 @@ func makeTempRetryEmitter(store evs.EventStore, partitionCount int,
 
 func makeRetryEmitter(store evs.EventStore, chptman *chptsup.Manager,
 	tracker *rtm.PositionTracker,
-	gate *support.IngressGate,
+	gate *support.EntryGate,
 	o Options,
 ) (emitter evnt.Emitter, err error) {
 	handler, err := persist.NewPersistHandler(store, chptman, tracker,
@@ -421,7 +424,7 @@ func makeRetryEmitter(store evs.EventStore, chptman *chptsup.Manager,
 			var cberr *codes.CircuitBreakerOpenError
 			if errors.As(err, &cberr) {
 				if gate.Close() {
-					reportIngressGateClosed(o.Logger, cberr.Service())
+					reportEntryGateClosed(o.Logger, cberr.Service())
 				}
 			}
 		}
@@ -434,7 +437,7 @@ func makePersistHandlerOpts(o Options) []persist.SetOption {
 	return append([]persist.SetOption{persist.WithLogger(o.Logger)}, o.PersistHandler...)
 }
 
-func makeRetryWorker(engine Engine, gate *support.IngressGate,
+func makeRetryWorker(engine Engine, gate *support.EntryGate,
 	o Options,
 ) (worker *wrk.Worker, err error) {
 	opts := append(

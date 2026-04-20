@@ -8,31 +8,31 @@ const (
 	gateSealed uint32 = 2
 )
 
-type IngressGate struct {
+type EntryGate struct {
 	state atomic.Uint32
 }
 
-func NewClosedIngressGate() *IngressGate {
-	g := &IngressGate{}
+func NewClosedEntryGate() *EntryGate {
+	g := &EntryGate{}
 	g.state.Store(gateClosed)
 	return g
 }
 
 // Open returns true if the gate was closed and is now open.
 // It returns false if the gate was already open or is sealed.
-func (g *IngressGate) Open() bool {
+func (g *EntryGate) Open() bool {
 	return g.state.CompareAndSwap(gateClosed, gateOpen)
 }
 
 // Close returns true if the gate was open and is now closed.
-func (g *IngressGate) Close() bool {
+func (g *EntryGate) Close() bool {
 	return g.state.CompareAndSwap(gateOpen, gateClosed)
 }
 
-func (g *IngressGate) Seal() {
+func (g *EntryGate) Seal() {
 	g.state.Store(gateSealed)
 }
 
-func (g *IngressGate) Closed() bool {
+func (g *EntryGate) Closed() bool {
 	return g.state.Load() != gateOpen
 }

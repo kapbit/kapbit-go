@@ -12,7 +12,7 @@ type Tools struct {
 	Factory wfl.Factory
 	Engine  Engine
 	Worker  Worker
-	Gate    *support.IngressGate
+	Gate    *support.EntryGate
 }
 
 type Engine interface {

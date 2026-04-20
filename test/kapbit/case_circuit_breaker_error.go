@@ -15,13 +15,13 @@ import (
 )
 
 func CircuitBreakerErrorTestCase() TestCase {
-	name := "Should close ingress gate when ExecWorkflow returns CircuitBreakerOpenError"
+	name := "Should close entry gate when ExecWorkflow returns CircuitBreakerOpenError"
 
 	var (
 		workflw = mock.NewWorkflowMock()
 		reslt   = wfl.Result("")
 		err     = codes.NewCircuitBreakerOpenError("service-a")
-		gate    = &support.IngressGate{}
+		gate    = &support.EntryGate{}
 
 		factory = mock.NewFactoryMock().RegisterNew(
 			func(nodeID string, params wfl.Params, progress *wfl.Progress) (wfl.Workflow, error) {
@@ -50,7 +50,7 @@ func CircuitBreakerErrorTestCase() TestCase {
 		Setup: Setup{
 			Tools: kapbit.Tools{
 				Factory: factory,
-				Engine: service,
+				Engine:  service,
 				Worker: mock.NewWorkerMock().RegisterStart(
 					func(ctx context.Context) {},
 				),

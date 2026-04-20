@@ -27,12 +27,12 @@ type Worker struct {
 	runner  supretry.Runner
 	level   atomic.Int32
 	engine  Engine
-	gate    *support.IngressGate
+	gate    *support.EntryGate
 	wg      sync.WaitGroup
 	logger  *slog.Logger
 }
 
-func New(engine Engine, gate *support.IngressGate,
+func New(engine Engine, gate *support.EntryGate,
 	opts ...SetOption,
 ) (worker *Worker, err error) {
 	o := Options{}
@@ -136,7 +136,7 @@ func (w *Worker) handleError(err error, ref *rtm.WorkflowRef) {
 		// In a case of a non-circuit breaker error, we opens the gate and
 		// resume normal execution.
 		if w.gate.Open() {
-			w.reportIngressGateOpened(ref)
+			w.reportEntryGateOpened(ref)
 			w.runNormal()
 		}
 		return
@@ -197,9 +197,9 @@ func (w *Worker) reportWorkflowExecutionFailed(ref *rtm.WorkflowRef, err error) 
 	)
 }
 
-func (w *Worker) reportIngressGateOpened(ref *rtm.WorkflowRef) {
+func (w *Worker) reportEntryGateOpened(ref *rtm.WorkflowRef) {
 	spec := ref.Workflow().Spec()
-	w.logger.Info("ingress gate opened, resuming normal execution",
+	w.logger.Info("entry gate opened, resuming normal execution",
 		"wid", spec.ID,
 		"wtype", spec.Def.Type(),
 		"attempt", ref.RetryCount(),

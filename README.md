@@ -16,7 +16,7 @@ fault-tolerant workflows without the need for complex external infrastructure.
     - [Events and Emitter](#events-and-emitter)
     - [Capacity \& Backpressure](#capacity--backpressure)
       - [MaxWorkflows Limit](#maxworkflows-limit)
-      - [Ingress Gate](#ingress-gate)
+      - [Entry Gate](#entry-gate)
     - [Observability \& Async Results](#observability--async-results)
     - [Repository And Fencing](#repository-and-fencing)
     - [Codec](#codec)
@@ -205,10 +205,10 @@ The `MaxWorkflows` threshold governs the total number of concurrent workflows
 an instance can process (including recovered workflows). Once reached, the 
 instance stops accepting new work until existing workflows complete.
 
-#### Ingress Gate
+#### Entry Gate
 
 When a Circuit Breaker opens, the system can no longer function properly and
-should stop accepting new workflows. This is exactly what the Ingress Gate is
+should stop accepting new workflows. This is exactly what the Entry Gate is
 for. Both the Kapbit Instance and the Emitter close it when they encounter a
 `codes.CircuitBreakerOpenError`. 
 
@@ -253,7 +253,7 @@ supported.
 
 ### Fault Isolation
 
-When a circuit breaker opens, the Ingress Gate halts all new workflows, 
+When a circuit breaker opens, the Entry Gate halts all new workflows, 
 allowing a single service failure to block the entire Kapbit instance.
 
 To mitigate this, group services into logical bundles, each served by its own 

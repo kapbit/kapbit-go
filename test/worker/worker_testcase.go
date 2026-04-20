@@ -26,8 +26,8 @@ type TestCase struct {
 
 type TestConfig struct {
 	Engine mock.EngineMock
-	Gate    *support.IngressGate
-	Opts    []wrk.SetOption
+	Gate   *support.EntryGate
+	Opts   []wrk.SetOption
 }
 
 type Want struct {
@@ -59,11 +59,11 @@ func RunTest(t *testing.T, tc TestCase) {
 	})
 }
 
-func testComponents() (service mock.EngineMock, gate *support.IngressGate,
+func testComponents() (service mock.EngineMock, gate *support.EntryGate,
 	retryCh chan *rtm.WorkflowRef, ref *rtm.WorkflowRef, mcks []*mok.Mock,
 ) {
 	service = mock.NewEngineMock()
-	gate = &support.IngressGate{}
+	gate = &support.EntryGate{}
 	retryCh = make(chan *rtm.WorkflowRef, 1)
 
 	workflow := newWorkflow()

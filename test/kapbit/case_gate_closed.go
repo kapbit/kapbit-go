@@ -12,10 +12,10 @@ import (
 )
 
 func GateClosedTestCase() TestCase {
-	name := "Should return ErrIngressGateClosed when gate is closed"
+	name := "Should return ErrEntryGateClosed when gate is closed"
 
 	var (
-		gate         = &support.IngressGate{}
+		gate         = &support.EntryGate{}
 		timeProvider = mock.NewTimeProviderMock()
 
 		mcks = []*mok.Mock{
@@ -28,7 +28,7 @@ func GateClosedTestCase() TestCase {
 		Setup: Setup{
 			Tools: kapbit.Tools{
 				Factory: mock.NewFactoryMock(),
-				Engine: mock.NewEngineMock(),
+				Engine:  mock.NewEngineMock(),
 				Worker: mock.NewWorkerMock().RegisterStart(
 					func(ctx context.Context) {},
 				),
@@ -46,7 +46,7 @@ func GateClosedTestCase() TestCase {
 			Input: wfl.Input("input-1"),
 		},
 		Want: Want{
-			Error: kapbit.NewKapbitError(kapbit.ErrIngressGateClosed),
+			Error: kapbit.NewKapbitError(kapbit.ErrEntryGateClosed),
 		},
 	}
 }

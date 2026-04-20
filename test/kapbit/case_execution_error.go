@@ -21,7 +21,7 @@ func ExecutionErrorTestCase() TestCase {
 		workflw = mock.NewWorkflowMock()
 		reslt   = wfl.Result("")
 		err     = errors.New("execution error")
-		gate    = &support.IngressGate{}
+		gate    = &support.EntryGate{}
 
 		factory = mock.NewFactoryMock().RegisterNew(
 			func(nodeID string, params wfl.Params, progress *wfl.Progress) (wfl.Workflow, error) {
@@ -50,7 +50,7 @@ func ExecutionErrorTestCase() TestCase {
 		Setup: Setup{
 			Tools: kapbit.Tools{
 				Factory: factory,
-				Engine: service,
+				Engine:  service,
 				Worker: mock.NewWorkerMock().RegisterStart(
 					func(ctx context.Context) {},
 				),

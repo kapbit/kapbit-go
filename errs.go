@@ -11,12 +11,12 @@ import (
 const ErrorPrefix = "kapbit: "
 
 var (
-	ErrClosed            = errors.New("closed")
-	ErrFenced            = errors.New("fenced")
-	ErrIngressGateClosed = errors.New("ingress gate closed")
+	ErrClosed          = errors.New("closed")
+	ErrFenced          = errors.New("fenced")
+	ErrEntryGateClosed = errors.New("entry gate closed")
 )
 
-// NewKapbitError wraps an existing error with the "kapbitinator: " prefix.
+// NewKapbitError wraps an existing error with the "kapbit: " prefix.
 func NewKapbitError(err error) error {
 	return fmt.Errorf(ErrorPrefix+"%w", err)
 }
