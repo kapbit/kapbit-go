@@ -1,10 +1,10 @@
-# kapbit-go: Saga Orchestrator for Go
+# Kapbit: Lightweight Workflow Orchestrator for Go
 
-Kapbit is a lightweight, high-performance workflow orchestrator for Go, designed 
-specifically for the Saga pattern. It provides a robust framework for building 
-long-running, fault-tolerant workflows without the overhead of heavy infrastructure.
+**Kapbit** is a lightweight, high-performance workflow engine for Go. It enables
+native Saga-style compensations, providing a robust framework for building
+fault-tolerant workflows without the need for complex external infrastructure.
 
-- [kapbit-go: Saga Orchestrator for Go](#kapbit-go-saga-orchestrator-for-go)
+- [Kapbit: Lightweight Workflow Orchestrator for Go](#kapbit-lightweight-workflow-orchestrator-for-go)
   - [Why Kapbit?](#why-kapbit)
   - [Key Features](#key-features)
   - [Examples](#examples)
@@ -28,7 +28,7 @@ long-running, fault-tolerant workflows without the overhead of heavy infrastruct
 
 - **Log-Oriented Architecture**: Unlike traditional orchestrators that rely on
   distributed databases, Kapbit is built on a distributed log (currently
-  supporting Kafka). This offers superior performance, natural event sourcing,
+  supporting Kafka). This offers **superior performance**, natural event sourcing,
   and simplified data consistency.
 - **No DSL Required**: No custom Domain Specific Languages or complex JSON/YAML
   definitions. If you know Go, you know Kapbit.
@@ -44,14 +44,14 @@ long-running, fault-tolerant workflows without the overhead of heavy infrastruct
 - **Fault Tolerance**: Automatically reconnects to storage and resumes workflow
   execution after restarts.
 - **Workflow Idempotency**: Processes each unique workflow exactly once.
-- **Circuit Breaker Support**: Provided for both storage (built-in) and workflow
-  (user-managed) layers.
+- **Circuit Breaker Support**: Provided for both storage (built-in) and external
+  services (user-managed).
 - **Extensible Design**: Built to support various storage backends and codecs;
   currently ships with Kafka and JSON support.
 
 ## Examples
 
-For complete usage examples, visit the [examples-go](https://github.com/kapbit/examples-go) repository.
+For complete usage examples, visit [examples-go](https://github.com/kapbit/examples-go).
 
 ## How It Works
 
@@ -60,7 +60,7 @@ Let's look at the Kapbit components.
 ### Kapbit Instance
 
 Before launching any new workflow, a Kapbit instance must establish itself as
-an authorized Writer for the storage. It does so by emitting an Active Writer
+an authorized Writer for the storage. It does so by emitting an `Active Writer`
 event to all available partitions. The storage layer ensures only one instance
 can hold writer status at a time, preventing conflicting writes and split-brain
 scenarios.
@@ -75,7 +75,7 @@ resumed workflows.
 
 ### Workflow
 
-A workflow starts with a Workflow Created event being written to the log. No
+A workflow starts with a `Workflow Created` event being written to the log. No
 business logic runs until this event is successfully saved. Once persisted, the
 execution is guaranteed - if the system crashes right after saving the event,
 the new instance recovery process will find the record and resume the workflow.
@@ -87,9 +87,10 @@ are defined by the following components:
 - Step Actions: Each step consists of an execution and an optional
   compensation action.
 - Step Outcome: An action return value represents a step's outcome.
-- Progress State: Outcomes are accumulated into a Progress state, which is
+- Progress State: Outcomes are accumulated into a Progress object, which is
   passed forward to each subsequent step and Result Builder.
-- Result Builder: Produces the final workflow result.
+- Result Builder: Produces the final workflow result (from the workflow input
+  and accumulated Progress).
 
 The diagram below shows the successful execution (happy path).
 
@@ -170,20 +171,27 @@ Dead Letter event for manual handling.
 
 Different system components emit different events:
 
-- Kapbit Instance: Emits Active Writer, Workflow Created and Rejected events.
-- Workflow: Emits Step Outcome and Workflow Result events.
-- Retry Worker: Emits Dead Letter and Rejected events.
+- Kapbit instance emits:
+  - `Active Writer Event` 
+  - `Workflow Created Event` 
+  - `Rejected Event`
+- Workflow emits:
+  - `Step Outcome Event` 
+  - `Workflow Result Event`.
+- Retry Worker emits:
+  - `Dead Letter Event`
+  - `Rejected Event`.
 
-Where Rejected event is used to terminate the workflow if some of its event was
-rejected by the storage, or there was an encoding error.
+Where `Rejected Event` is used to terminate the workflow if some of its event 
+was rejected by the storage, or there was an encoding error.
 
 All components delegate event emission to the Emitter, which retries 
 indefinitely using **exponential backoff**. This ensures that events are 
 eventually processed even during temporary outages.
 
-While an alternative approach might be to give up and emit a Dead Letter after
+While an alternative approach might be to give up and emit a `Dead Letter` after
 several failed attempts, this wouldn't work - if the storage itself is
-unavailable the Dead Letter saving would also fail. Therefore, retrying 
+unavailable the `Dead Letter` saving would also fail. Therefore, retrying 
 indefinitely is the only safe strategy.
 
 ### Capacity & Backpressure
@@ -271,8 +279,7 @@ workflow orchestration.
   sequential writes and high-concurrency reads, making it ideal for event 
   sourcing.
 - **Partition-Based Scaling**: Kapbit leverages Kafka partitions for horizontal 
-  scalability. Processing capacity can be scaled by adding more Kapbit instances 
-  and increasing the partition count.
+  scalability. 
 - **Minimalistic Core**: The engine itself is lightweight and focused solely on 
   state management.
 
