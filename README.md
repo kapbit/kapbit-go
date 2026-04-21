@@ -63,60 +63,60 @@ repository.
 package main
 
 import (
-	"context"
-	"fmt"
-	"reflect"
-	"strings"
+  "context"
+  "fmt"
+  "reflect"
+  "strings"
 
-	cdcjson "github.com/kapbit/codec-json-go"
-	"github.com/kapbit/kapbit-go"
-	"github.com/kapbit/kapbit-go/repository/mem"
-	wfl "github.com/kapbit/kapbit-go/workflow"
+  cdcjson "github.com/kapbit/codec-json-go"
+  "github.com/kapbit/kapbit-go"
+  "github.com/kapbit/kapbit-go/repository/mem"
+  wfl "github.com/kapbit/kapbit-go/workflow"
 )
 
 func main() {
-	// 1. Define steps and result builder
-	step1 := wfl.Step{
-		Execute: wfl.ActionFn[wfl.Outcome](
-			func(_ context.Context, _ wfl.Input, _ *wfl.Progress) (wfl.Outcome, error) {
-				return wfl.Success("Incredible"), nil
-			},
-		),
-	}
-	step2 := wfl.Step{
-		Execute: wfl.ActionFn[wfl.Outcome](
-			func(_ context.Context, _ wfl.Input, _ *wfl.Progress) (wfl.Outcome, error) {
-				return wfl.Success("World!"), nil
-			},
-		),
-	}
-	resultBuilder := wfl.ActionFn[wfl.Result](
-		func(_ context.Context, input wfl.Input, p *wfl.Progress) (wfl.Result, error) {
-			// Combine the initial input with the outcomes of all executed steps.
-			parts := []string{input.(string)}
-			p.ForEachExecution(
-				func(o wfl.Outcome) error {
-					parts = append(parts, o.(wfl.ValueOutcome[string]).Value)
-					return nil
-				},
-			)
-			return strings.Join(parts, " "), nil
-		},
-	)
-	// 2. Create workflow definition.
-	defs := wfl.Definitions{wfl.MustDefinition("simple", resultBuilder, step1, step2)}
-	// 3. Setup with in-memory repository
-	repo := mem.New(1, 0)
-	// Register all types that will be serialized into the repository.
-	codec := cdcjson.NewCodec(
-		[]reflect.Type{reflect.TypeFor[string]()},                   // Input
-		[]reflect.Type{reflect.TypeFor[wfl.ValueOutcome[string]]()}, // Outcomes
-		[]reflect.Type{reflect.TypeFor[string]()},                   // Result
-	)
-	kbit, _ := kapbit.New(context.Background(), defs, codec, repo)
-	// 4. Execute workflow.
-	result, _ := kbit.ExecWorkflow("wfl-1", "simple", wfl.Input("Hello"))
-	fmt.Printf("Result: %v\n", result) // Result: Hello Incredible World!
+  // 1. Define steps and result builder
+  step1 := wfl.Step{
+    Execute: wfl.ActionFn[wfl.Outcome](
+      func(_ context.Context, _ wfl.Input, _ *wfl.Progress) (wfl.Outcome, error) {
+        return wfl.Success("Incredible"), nil
+      },
+    ),
+  }
+  step2 := wfl.Step{
+    Execute: wfl.ActionFn[wfl.Outcome](
+      func(_ context.Context, _ wfl.Input, _ *wfl.Progress) (wfl.Outcome, error) {
+        return wfl.Success("World!"), nil
+      },
+    ),
+  }
+  resultBuilder := wfl.ActionFn[wfl.Result](
+    func(_ context.Context, input wfl.Input, p *wfl.Progress) (wfl.Result, error) {
+      // Combine the initial input with the outcomes of all executed steps.
+      parts := []string{input.(string)}
+      p.ForEachExecution(
+        func(o wfl.Outcome) error {
+          parts = append(parts, o.(wfl.ValueOutcome[string]).Value)
+          return nil
+        },
+      )
+      return strings.Join(parts, " "), nil
+    },
+  )
+  // 2. Create workflow definition.
+  defs := wfl.Definitions{wfl.MustDefinition("simple", resultBuilder, step1, step2)}
+  // 3. Setup with in-memory repository
+  repo := mem.New(1, 0)
+  // Register all types that will be serialized into the repository.
+  codec := cdcjson.NewCodec(
+    []reflect.Type{reflect.TypeFor[string]()},                   // Input
+    []reflect.Type{reflect.TypeFor[wfl.ValueOutcome[string]]()}, // Outcomes
+    []reflect.Type{reflect.TypeFor[string]()},                   // Result
+  )
+  kbit, _ := kapbit.New(context.Background(), defs, codec, repo)
+  // 4. Execute workflow.
+  result, _ := kbit.ExecWorkflow("wfl-1", "simple", wfl.Input("Hello"))
+  fmt.Printf("Result: %v\n", result) // Result: Hello Incredible World!
 }
 ```
 
