@@ -4,9 +4,8 @@
 native Saga-style compensations, providing a robust framework for building
 fault-tolerant workflows without the need for complex external infrastructure.
 
-> [!NOTE]
-> The project is currently in its **early development stage**, and the API is
-> subject to change.
+> [!IMPORTANT]
+> As this project is in early development, breaking changes may occur.
 
 - [Kapbit: Lightweight Workflow Orchestrator for Go](#kapbit-lightweight-workflow-orchestrator-for-go)
   - [Why Kapbit?](#why-kapbit)
@@ -27,7 +26,6 @@ fault-tolerant workflows without the need for complex external infrastructure.
     - [Codec](#codec)
     - [Fault Isolation](#fault-isolation)
   - [Performance \& Scalability](#performance--scalability)
-    - [Why Kapbit is Fast](#why-kapbit-is-fast)
 
 ## Why Kapbit?
 
@@ -75,7 +73,7 @@ import (
 )
 
 func main() {
-  // 1. Define steps and result builder
+  // 1. Define workflow steps and result builder.
   step1 := wfl.Step{
     Execute: wfl.ActionFn[wfl.Outcome](
       func(_ context.Context, _ wfl.Input, _ *wfl.Progress) (wfl.Outcome, error) {
@@ -105,7 +103,7 @@ func main() {
   )
   // 2. Create workflow definition.
   defs := wfl.Definitions{wfl.MustDefinition("simple", resultBuilder, step1, step2)}
-  // 3. Setup with in-memory repository
+  // 3. Setup with in-memory repository.
   repo := mem.New(1, 0)
   // Register all types that will be serialized into the repository.
   codec := cdcjson.NewCodec(
@@ -122,7 +120,10 @@ func main() {
 
 ## Examples
 
-For complete usage examples, visit [examples-go](https://github.com/kapbit/examples-go).
+For complete usage examples, visit [examples-go](https://github.com/kapbit/examples-go). 
+
+Need maximum performance? Check out the [saga](https://github.com/kapbit/examples-go/tree/main/saga) 
+example to see Kapbit paired with [cmd-stream](https://github.com/kapbit/cmd-stream-go).
 
 ## How It Works
 
@@ -146,7 +147,7 @@ resumed workflows.
 
 ### Workflow
 
-A workflow starts with a `Workflow Created` event being written to the log. No
+A workflow starts with a `Workflow Created Event` being written to the log. No
 business logic runs until this event is successfully saved. Once persisted, the
 execution is guaranteed - if the system crashes right after saving the event,
 the new instance recovery process will find the record and resume the workflow.
@@ -236,7 +237,7 @@ resuming from the last failed step. It operates in two modes:
   when a Circuit Breaker opens.
 
 If a workflow exceeds its maximum retry limit, the worker terminates it with a
-Dead Letter event for manual handling.
+`Dead Letter Event` for manual handling.
 
 ### Events and Emitter
 
@@ -327,8 +328,8 @@ supported.
 
 ### Fault Isolation
 
-When a circuit breaker opens, the Entry Gate halts all new workflows, 
-allowing a single service failure to block the entire Kapbit instance.
+When a circuit breaker opens, the Entry Gate halts all new workflows, allowing a 
+single service failure to block the entire Kapbit instance.
 
 To mitigate this, group services into logical bundles, each served by its own 
 independent Kapbit instance.
@@ -346,21 +347,8 @@ kapbit1 (blocked)                kapbit2 (still works)
 Kapbit's architecture is fundamentally designed for high-throughput, low-latency 
 workflow orchestration.
 
-### Why Kapbit is Fast
-
-- **Log-Based Storage (Kafka)**: Unlike orchestrators that rely on distributed 
-  databases, Kapbit operates on a distributed log. Kafka is optimized for 
-  sequential writes and high-concurrency reads, making it ideal for event 
-  sourcing.
-- **Partition-Based Scaling**: Kapbit leverages Kafka partitions for horizontal 
-  scalability. 
-- **Minimalistic Core**: The engine itself is lightweight and focused solely on 
-  state management.
-
 If you are coming from a traditional database-backed workflow engine, 
 **significantly higher throughput** and better scalability can be expected with 
-Kapbit's log-oriented approach. 
-
-While performance varies by environment, Kafka-based systems scale to hundreds 
-of thousands of events per second per node, while traditional databases often 
-hit a performance ceiling in the low thousands.
+Kapbit's log-oriented approach. While performance varies by environment, 
+Kafka-based systems scale to hundreds of thousands of events per second per node, 
+while traditional databases often hit a performance ceiling in the low thousands.
