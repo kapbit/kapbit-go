@@ -5,7 +5,7 @@ native Saga-style compensations, providing a robust framework for building
 fault-tolerant workflows without the need for complex external infrastructure.
 
 > [!IMPORTANT]
-> As this project is in early development, breaking changes may occur.
+> Early-stage project: APIs and behavior are subject to breaking changes.
 
 - [Kapbit: Lightweight Workflow Orchestrator for Go](#kapbit-lightweight-workflow-orchestrator-for-go)
   - [Why Kapbit?](#why-kapbit)
