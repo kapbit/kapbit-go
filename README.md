@@ -16,15 +16,15 @@ fault-tolerant workflows without the need for complex external infrastructure.
     - [Kapbit Instance](#kapbit-instance)
     - [Workflow](#workflow)
     - [Circuit Breakers](#circuit-breakers)
-    - [Retry Worker \& Dead Letters](#retry-worker--dead-letters)
-    - [Events and Emitter](#events-and-emitter)
-    - [Capacity \& Backpressure](#capacity--backpressure)
+    - [Retry Worker](#retry-worker)
+    - [Events](#events)
+    - [Capacity Management](#capacity-management)
       - [MaxWorkflows Limit](#maxworkflows-limit)
       - [Entry Gate](#entry-gate)
-    - [Observability \& Async Results](#observability--async-results)
-    - [Repository And Fencing](#repository-and-fencing)
+    - [Repository (Fencing)](#repository-fencing)
     - [Codec](#codec)
-    - [Fault Isolation](#fault-isolation)
+  - [Async Results](#async-results)
+  - [Fault Isolation](#fault-isolation)
   - [Performance \& Scalability](#performance--scalability)
 
 ## Why Kapbit?
@@ -222,14 +222,14 @@ Kapbit supports two types of Circuit Breakers:
   from a workflow step signals to Kapbit that a downstream dependency is
   unavailable.
 
-### Retry Worker & Dead Letters
+### Retry Worker
 
 A workflow can fail (return a user-defined error) for only one reason: the 
 remote service it depends on is unavailable. In all other cases it should return
 a result, even after the compensation phase.
 
-The Retry Worker runs in the background to re-attempt failed workflows,
-resuming from the last failed step. It operates in two modes:
+The Retry Worker runs in the background to re-attempt failed workflows, resuming 
+from the last failed step. It operates in two modes:
 
 - **Fast Mode (Default)**: Handles temporary issues (like network blinks or
   timeouts) with immediate or high-frequency retries.
@@ -239,7 +239,7 @@ resuming from the last failed step. It operates in two modes:
 If a workflow exceeds its maximum retry limit, the worker terminates it with a
 `Dead Letter Event` for manual handling.
 
-### Events and Emitter
+### Events
 
 Different system components emit different events:
 
@@ -266,7 +266,7 @@ several failed attempts, this wouldn't work - if the storage itself is
 unavailable the `Dead Letter` saving would also fail. Therefore, retrying 
 indefinitely is the only safe strategy.
 
-### Capacity & Backpressure
+### Capacity Management
 
 Kapbit is designed to handle load gracefully, ensuring that a slow or unavailable 
 storage layer doesn't crash the system.
@@ -289,7 +289,27 @@ by Kapbit Instance or Retry Worker. During the close period, the last one can
 use already failed workflows to probe the system and reopen the gate as soon as 
 possible.
 
-### Observability & Async Results
+### Repository (Fencing)
+
+The Repository provides an abstraction layer over the storage. It is designed 
+for high availability and automatically reconnects if the connection drops.
+
+For local development and unit testing, Kapbit provides an **in-memory** 
+implementation (`repository/mem`). For production workloads, use the **Kafka** 
+implementation.
+
+The Repository also provides fencing guarantees. Fencing ensures that only the 
+active Kapbit instance can modify the storage. If a write or connection attempt 
+returns a Fenced error, it means the instance has lost ownership and can no 
+longer modify the storage. In this case, it will immediately terminate.
+
+### Codec
+
+The Repository depends on a user-provided Codec, to encode the Workflow related 
+data, such as: input, outcomes, result. At the moment only the JSON format is 
+supported.
+
+## Async Results
 
 Kapbit is an execution engine, not a query service. It does not include a 
 built-in component for retrieving asynchronous workflow results or historical 
@@ -307,26 +327,8 @@ This decoupled approach ensures that the execution engine remains lightweight
 and highly performant, while giving you the flexibility to build multiple 
 specialized views of your data.
 
-### Repository And Fencing
 
-The Repository provides an abstraction layer over the storage. It is designed 
-for high availability and automatically reconnects if the connection drops.
-
-For local development and unit testing, Kapbit provides an **in-memory** implementation 
-(`repository/mem`). For production workloads, use the **Kafka** implementation.
-
-The Repository also provides fencing guarantees. Fencing ensures that only the 
-active Kapbit instance can modify the storage. If a write or connection attempt 
-returns a Fenced error, it means the instance has lost ownership and can no 
-longer modify the storage. In this case, it will immediately terminate.
-
-### Codec
-
-The Repository depends on a user-provided Codec, to encode the Workflow related 
-data, such as: input, outcomes, result. At the moment only the JSON format is 
-supported.
-
-### Fault Isolation
+## Fault Isolation
 
 When a circuit breaker opens, the Entry Gate halts all new workflows, allowing a 
 single service failure to block the entire Kapbit instance.
@@ -341,7 +343,6 @@ kapbit1 (blocked)                kapbit2 (still works)
    |-- service2                       |-- service5
    |-- service3                       |-- service6
 ```
-
 ## Performance & Scalability
 
 Kapbit's architecture is fundamentally designed for high-throughput, low-latency 
