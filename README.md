@@ -1,13 +1,13 @@
-# Kapbit: Lightweight Workflow Orchestrator for Go
+# Kapbit: Lightweight Workflow Engine for Go
 
-**Kapbit** is a lightweight, high-performance workflow engine for Go. It enables
-native Saga-style compensations, providing a robust framework for building
-fault-tolerant workflows without the need for complex external infrastructure.
+**Kapbit** is a lightweight, high-performance workflow engine for Go. It provides
+a robust framework with Saga-style compensations for building fault-tolerant
+workflows.
 
 > [!IMPORTANT]
 > Early-stage project: APIs and behavior are subject to breaking changes.
 
-- [Kapbit: Lightweight Workflow Orchestrator for Go](#kapbit-lightweight-workflow-orchestrator-for-go)
+- [Kapbit: Lightweight Workflow Engine for Go](#kapbit-lightweight-workflow-engine-for-go)
   - [Why Kapbit?](#why-kapbit)
   - [Key Features](#key-features)
   - [Quick Start](#quick-start)
@@ -29,9 +29,9 @@ fault-tolerant workflows without the need for complex external infrastructure.
 
 ## Why Kapbit?
 
-- **Log-Oriented Architecture**: Unlike traditional orchestrators that rely on
+- **Log-Oriented Architecture**: Unlike traditional engines that rely on
   distributed databases, Kapbit is built on a distributed log (currently
-  supporting Kafka). This offers **superior performance**, natural event sourcing,
+  supporting Kafka). This offers superior performance, natural event sourcing,
   and simplified data consistency.
 - **No DSL Required**: No custom Domain Specific Languages or complex JSON/YAML
   definitions. If you know Go, you know Kapbit.
